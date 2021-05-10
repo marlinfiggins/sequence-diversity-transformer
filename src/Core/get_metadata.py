@@ -29,7 +29,7 @@ def load_metadata_from_file(filename):
     :param filename: string
     :return:
     """
-    pd.read_csv(filename, delimiter='\t')
+    return pd.read_csv(filename, delimiter='\t')
 
 
 if __name__ == "__main__":
