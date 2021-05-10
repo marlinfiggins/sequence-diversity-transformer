@@ -2,12 +2,12 @@ from Bio import SeqIO
 import pandas as pd
 
 
-def get_sequence_metadata(file, save=True):    
+def get_sequence_metadata(file, save=True):
     dicts = {}
     for index, record in enumerate(SeqIO.parse(file, "fasta")):
         split_header = record.description.split("|")
 
-        dicts[index] = {"accession": split_header[0],
+        dicts[index] = {"accession_id": split_header[0],
                         "strain": split_header[1],
                         "year": split_header[2],
                         "month": split_header[3],
