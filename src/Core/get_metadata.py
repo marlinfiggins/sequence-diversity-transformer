@@ -2,7 +2,7 @@ from Bio import SeqIO
 import pandas as pd
 
 
-def get_sequence_metadata(file, save = True):    
+def get_sequence_metadata(file, save=True):    
     dicts = {}
     for index, record in enumerate(SeqIO.parse(file, "fasta")):
         split_header = record.description.split("|")
@@ -16,11 +16,20 @@ def get_sequence_metadata(file, save = True):
                         "segnum": split_header[6],
                         "length": len(record.seq)}
 
-    df = pd.DataFrame.from_dict(dicts, "index")
+    dataframe = pd.DataFrame.from_dict(dicts, "index")
 
     if save:
-        df.to_csv(file.split(".fa")[0] + "_metadata.tsv", sep="\t")
-    return df
+        dataframe.to_csv(file.split(".fa")[0] + "_metadata.tsv", sep="\t")
+    return dataframe
+
+
+def load_metadata_from_file(filename):
+    """
+    Helper function to load in metadata from a file.
+    :param filename: string
+    :return:
+    """
+    pd.read_csv(filename, delimiter='\t')
 
 
 if __name__ == "__main__":
