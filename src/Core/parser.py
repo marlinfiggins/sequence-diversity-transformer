@@ -9,8 +9,8 @@ from . import get_metadata
 class Parser(object):
     """ A frontend handler and dispatcher for label creation"""
 
-    def __init__(self, ref_data_file, metadata_file):
-        self.metadata = get_metadata.load_metadata_from_file(metadata_file)
+    def __init__(self, ref_data_file):
+        self.metadata = None
         self.ref_data_file = ref_data_file
         self.ref_labels = []
         self.ref_seqs = []
@@ -20,6 +20,14 @@ class Parser(object):
         self.labels = []
         self.built_data = False  # flag
         pass
+
+    def build_metadata(self, metadata_file):
+        metadata = get_metadata.load_metadata_from_file(metadata_file)
+        if self.metadata is None:
+            self.metadata = metadata_file
+        else:
+            assert type(self.metadata) is pd.DataFrame
+            self.metadata.append(metadata)
 
     def parse_ref_seqs(self):
         """
