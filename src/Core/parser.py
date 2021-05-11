@@ -1,8 +1,9 @@
+import Bio.AlignIO.Interfaces
 import numpy as np
 import pandas as pd
 import joblib
 import Bio
-from Bio import SeqIO
+from Bio import SeqIO, pairwise2
 from . import get_metadata
 
 
@@ -21,7 +22,15 @@ class Parser(object):
         self.built_data = False  # flag
         pass
 
-    def build_metadata(self, metadata_file):
+    def build_metadata_from_df(self, metadata_obj):
+        pass
+
+    def build_metadata_from_file(self, metadata_file):
+        """
+        Get a filename and add the metadata in the frame
+        :param metadata_file:
+        :return:
+        """
         metadata = get_metadata.load_metadata_from_file(metadata_file)
         if self.metadata is None:
             self.metadata = metadata_file
@@ -44,23 +53,31 @@ class Parser(object):
         :param data_file:
         :return:
         """
-        data = Bio.SeqIO.to_dict(SeqIO.parse(data_file, "fasta"))
+        tmp_data = Bio.SeqIO.to_dict(SeqIO.parse(data_file, "fasta"))
         # no current data, just add it
+        data_dict = {}
+        for key in tmp_data.keys():
+            new_key = key.split('/').split('|')[0]
+            data_dict[new_key] = tmp_data[key]
         if self.data is None:
-            self.data = data
+            self.data = data_dict
         else:
-            for key in data.keys():
+            for key in data_dict.keys():
                 # Make sure key does not clash
                 assert key not in self.data.keys()
                 # add key and copy data
-                self.data[key] = data[key]
+                self.data[key] = data_dict[key]
 
     def parse_data(self):
-        """ Dispatch workers for data and cleanup"""
+        """
+        Dispatch workers for data and cleanup
+
+        """
         with joblib.Parallel(n_jobs=16) as parallel:
             # Execute 1 copy to each of n workers of data
+            # Really only need to pass in accession_id's
             worker_results = parallel(joblib.delayed(worker_parser)(self.data, self.ref_seqs, accession_id) for
-                                      accession_id in self.metadata.keys())
+                                      accession_id in self.metadata[]) # Loop over accession_id's from dataframe
             res = list(worker_results)  # sync barrier
         acc_list = []
         neighbors = []
@@ -71,21 +88,24 @@ class Parser(object):
             neighbors.append(data_tuple[1])
             distances.append(data_tuple[2])
             labels.append(data_tuple[3])
-        return acc_list, neighbors, distances, labels
+        return {'accession_id': acc_list, 'neighbors': neighbors, 'distances': distances, 'labels': labels}
 
 
 def worker_parser(data_dict, refs, accession_id):
     """
     Compute Hamming distances and return the string rep for closest seq
-    and label derived from shortest  reference sequence.
+    and label derived from shortest reference sequence.
 
     :param data_dict:
     :param refs:
     :param accession_id: string
     :return: tuple
     """
-    seq = data_dict[accession_id]
+
+    seq = data_dict[accession_id].seq
     for ref in refs:
-        pass
+        # Compute distance to sequence
+        alignment = pairwise2.align.align
+
     raise NotImplemented
     # return accession_id, neighbor, distance, label
