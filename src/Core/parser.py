@@ -13,8 +13,7 @@ class Parser(object):
     def __init__(self, ref_data_file):
         self.metadata = None
         self.ref_data_file = ref_data_file
-        self.ref_labels = []
-        self.ref_seqs = []
+        self.refs
         self.parse_ref_seqs()
         self.data = None
         self.data_raw = []
@@ -52,9 +51,15 @@ class Parser(object):
         :return:
         """
         #TODO: Change to dictionary to add for easy referencing of sequences
+        ref_dict = {}
         for record in Bio.SeqIO.parse(self.ref_data_file, "fasta"):
-            self.ref_seqs.append(record.seq)
-            self.ref_labels.append(record.name)
+            ref_dict[record.name] = record # Double check names are correcty parsed in sequence column
+
+        if self.refs is None:
+            self.refs = ref_dict
+        else:
+            assert type(self.refs) is dict
+            self.refs.update(ref_dict)
 
     def build_data(self, data_file):
         """
@@ -89,7 +94,7 @@ class Parser(object):
             # Really only need to pass in accession_id's
             worker_results = parallel(joblib.delayed(worker_parser)(
                 self.data,
-                self.ref_seqs,
+                self.refs,
                 self.metadata,
                 accession_id) for accession_id in self.metadata.keys)
             res = list(worker_results)  # sync barrier
