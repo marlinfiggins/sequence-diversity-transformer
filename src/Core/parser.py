@@ -119,7 +119,7 @@ def get_label(s1, s2):
         raise ValueError("Strand lengths are not equal!")
     return [ch1 != ch2 for ch1, ch2 in zip(s1, s2)]
 
-def worker_parser(data, refs, accession_id):
+def worker_parser(data, refs, metadata, accession_id):
     """
     Compute Hamming distances and return the string rep for closest seq
     and label derived from shortest reference sequence.
