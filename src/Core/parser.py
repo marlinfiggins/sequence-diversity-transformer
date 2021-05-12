@@ -51,6 +51,7 @@ class Parser(object):
         Parse the reference sequences into the data structure
         :return:
         """
+        #TODO: Change to dictionary to add for easy referencing of sequences
         for record in Bio.SeqIO.parse(self.ref_data_file, "fasta"):
             self.ref_seqs.append(record.seq)
             self.ref_labels.append(record.name)
@@ -67,6 +68,7 @@ class Parser(object):
         for key in tmp_data.keys():
             new_key = key.split('/').split('|')[0]
             data_dict[new_key] = tmp_data[key]
+
         if self.data is None:
             self.data = data_dict
         else:
@@ -81,39 +83,51 @@ class Parser(object):
         Dispatch workers for data and cleanup
 
         """
+        # TODO: Refactor and do MSA on sets with same reference sequences
         with joblib.Parallel(n_jobs=16) as parallel:
             # Execute 1 copy to each of n workers of data
             # Really only need to pass in accession_id's
-            worker_results = parallel(joblib.delayed(worker_parser)(self.data, self.ref_seqs, accession_id) for
-                                      accession_id in self.metadata[]) # Loop over accession_id's from dataframe
+            worker_results = parallel(joblib.delayed(worker_parser)(
+                self.data,
+                self.ref_seqs,
+                self.metadata,
+                accession_id) for accession_id in self.metadata.keys)
             res = list(worker_results)  # sync barrier
+
         acc_list = []
-        neighbors = []
-        distances = []
+        aln_seqs = []
+        scores = []
         labels = []
         for data_tuple in res:
             acc_list.append(data_tuple[0])
-            neighbors.append(data_tuple[1])
-            distances.append(data_tuple[2])
+            aln_seqs.append(data_tuple[1])
+            scores.append(data_tuple[2])
             labels.append(data_tuple[3])
-        return {'accession_id': acc_list, 'neighbors': neighbors, 'distances': distances, 'labels': labels}
+        return {'accession_id': acc_list,
+                'aligned_seqs': aln_seqs,
+                'scores': scores,
+                'labels': labels}
 
 
-def worker_parser(data_dict, refs, accession_id):
+def get_label(s1, s2):
+    if len(s1) != len(s2):
+        raise ValueError("Strand lengths are not equal!")
+    return [ch1 != ch2 for ch1, ch2 in zip(s1, s2)]
+
+def worker_parser(data, refs, accession_id):
     """
     Compute Hamming distances and return the string rep for closest seq
     and label derived from shortest reference sequence.
 
-    :param data_dict:
+    :param data:
     :param refs:
     :param accession_id: string
     :return: tuple
     """
 
-    seq = data_dict[accession_id].seq
-    for ref in refs:
-        # Compute distance to sequence
-        alignment = pairwise2.align.align
+    seq = data[accession_id].seq
+    ref_seq = refs[metadata[accession_id][reference]].seq
+    aligned = pairwise2.align.globalxx(seq, ref_seq)
+    aln_seq, aln_ref, score, begin, end = aligned[0]
 
-    raise NotImplemented
-    # return accession_id, neighbor, distance, label
+    return accession_id, aln_seq, aligned.score, get_label(aln_seq, aln_ref)
