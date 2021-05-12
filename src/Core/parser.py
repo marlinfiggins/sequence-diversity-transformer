@@ -41,14 +41,14 @@ class Parser(object):
             get_metadata.load_metadata_from_file(metadata_file)
         )
 
-    def parse_ref_seqs(self):
+    def parse_ref_seqs(self, ref_data_file):
         """
         Parse the reference sequences into the data structure
         :return:
         """
         #TODO: Change to dictionary to add for easy referencing of sequences
         ref_dict = {}
-        for record in Bio.SeqIO.parse(self.ref_data_file, "fasta"):
+        for record in Bio.SeqIO.parse(ref_data_file, "fasta"):
             ref_dict[record.name] = record # Double check names are correcty parsed in sequence column
 
         if self.refs is None:
