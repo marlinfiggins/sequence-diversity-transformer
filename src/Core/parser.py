@@ -10,14 +10,10 @@ from . import get_metadata
 class Parser(object):
     """ A frontend handler and dispatcher for label creation"""
 
-    def __init__(self, ref_data_file):
+    def __init__(self):
         self.metadata = None
-        self.ref_data_file = ref_data_file
-        self.refs
-        self.parse_ref_seqs()
+        self.refs = None
         self.data = None
-        self.data_raw = []
-        self.labels = []
         self.built_data = False  # flag
         pass
 
