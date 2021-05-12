@@ -119,6 +119,7 @@ def get_label(s1, s2):
         raise ValueError("Strand lengths are not equal!")
     return [ch1 != ch2 for ch1, ch2 in zip(s1, s2)]
 
+
 def worker_parser(data, refs, metadata, accession_id):
     """
     Compute Hamming distances and return the string rep for closest seq
@@ -131,7 +132,7 @@ def worker_parser(data, refs, metadata, accession_id):
     """
 
     seq = data[accession_id].seq
-    ref_seq = refs[metadata[accession_id][reference]].seq
+    ref_seq = refs[metadata[accession_id]["ref"]].seq
     aligned = pairwise2.align.globalxx(seq, ref_seq)
     aln_seq, aln_ref, score, begin, end = aligned[0]
 
