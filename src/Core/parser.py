@@ -66,7 +66,7 @@ class Parser(object):
         # no current data, just add it
         data_dict = {}
         for key in tmp_data.keys():
-            new_key = key.split('/').split('|')[0]
+            new_key = key.split('|')[0]
             data_dict[new_key] = tmp_data[key]
 
         if self.data is None:
