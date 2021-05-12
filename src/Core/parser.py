@@ -22,8 +22,19 @@ class Parser(object):
         self.built_data = False  # flag
         pass
 
-    def build_metadata_from_df(self, metadata_obj):
-        pass
+    def build_metadata_from_df(self, metadata):
+        """
+        Get metadata as pd.DataFrame and built as dictionary with id as label.
+        :param metadata:
+        :return:
+        """
+        metadata = metadata.set_index("accession_id").to_dict()
+
+        if self.metadata is None:
+            self.metadata = metadata
+        else:
+            assert type(self.metadata) is dict
+            self.metadata.update(metadata)
 
     def build_metadata_from_file(self, metadata_file):
         """
@@ -31,12 +42,9 @@ class Parser(object):
         :param metadata_file:
         :return:
         """
-        metadata = get_metadata.load_metadata_from_file(metadata_file)
-        if self.metadata is None:
-            self.metadata = metadata_file
-        else:
-            assert type(self.metadata) is pd.DataFrame
-            self.metadata.append(metadata)
+        self.build_metadata_from_df(
+            get_metadata.load_metadata_from_file(metadata_file)
+        )
 
     def parse_ref_seqs(self):
         """
