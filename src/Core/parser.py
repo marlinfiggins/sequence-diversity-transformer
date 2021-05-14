@@ -10,20 +10,26 @@ from . import get_metadata
 class Parser(object):
     """ A frontend handler and dispatcher for label creation"""
 
-    def __init__(self, ref_data_file):
+    def __init__(self):
         self.metadata = None
-        self.ref_data_file = ref_data_file
-        self.ref_labels = []
-        self.ref_seqs = []
-        self.parse_ref_seqs()
+        self.refs = None
         self.data = None
-        self.data_raw = []
-        self.labels = []
         self.built_data = False  # flag
         pass
 
-    def build_metadata_from_df(self, metadata_obj):
-        pass
+    def build_metadata_from_df(self, metadata):
+        """
+        Get metadata as pd.DataFrame and built as dictionary with id as label.
+        :param metadata:
+        :return:
+        """
+        metadata = metadata.set_index("accession_id").to_dict()
+
+        if self.metadata is None:
+            self.metadata = metadata
+        else:
+            assert type(self.metadata) is dict
+            self.metadata.update(metadata)
 
     def build_metadata_from_file(self, metadata_file):
         """
@@ -31,21 +37,25 @@ class Parser(object):
         :param metadata_file:
         :return:
         """
-        metadata = get_metadata.load_metadata_from_file(metadata_file)
-        if self.metadata is None:
-            self.metadata = metadata_file
-        else:
-            assert type(self.metadata) is pd.DataFrame
-            self.metadata.append(metadata)
+        self.build_metadata_from_df(
+            get_metadata.load_metadata_from_file(metadata_file)
+        )
 
-    def parse_ref_seqs(self):
+    def parse_ref_seqs(self, ref_data_file):
         """
         Parse the reference sequences into the data structure
         :return:
         """
-        for record in Bio.SeqIO.parse(self.ref_data_file, "fasta"):
-            self.ref_seqs.append(record.seq)
-            self.ref_labels.append(record.name)
+        #TODO: Change to dictionary to add for easy referencing of sequences
+        ref_dict = {}
+        for record in Bio.SeqIO.parse(ref_data_file, "fasta"):
+            ref_dict[record.name] = record # Double check names are correcty parsed in sequence column
+
+        if self.refs is None:
+            self.refs = ref_dict
+        else:
+            assert type(self.refs) is dict
+            self.refs.update(ref_dict)
 
     def build_data(self, data_file):
         """
@@ -57,8 +67,9 @@ class Parser(object):
         # no current data, just add it
         data_dict = {}
         for key in tmp_data.keys():
-            new_key = key.split('/').split('|')[0]
+            new_key = key.split('|')[0]
             data_dict[new_key] = tmp_data[key]
+
         if self.data is None:
             self.data = data_dict
         else:
@@ -73,39 +84,52 @@ class Parser(object):
         Dispatch workers for data and cleanup
 
         """
+        # TODO: Refactor and do MSA on sets with same reference sequences
         with joblib.Parallel(n_jobs=16) as parallel:
             # Execute 1 copy to each of n workers of data
             # Really only need to pass in accession_id's
-            worker_results = parallel(joblib.delayed(worker_parser)(self.data, self.ref_seqs, accession_id) for
-                                      accession_id in self.metadata[]) # Loop over accession_id's from dataframe
+            worker_results = parallel(joblib.delayed(worker_parser)(
+                self.data,
+                self.refs,
+                self.metadata,
+                accession_id) for accession_id in self.metadata.keys)
             res = list(worker_results)  # sync barrier
+
         acc_list = []
-        neighbors = []
-        distances = []
+        aln_seqs = []
+        scores = []
         labels = []
         for data_tuple in res:
             acc_list.append(data_tuple[0])
-            neighbors.append(data_tuple[1])
-            distances.append(data_tuple[2])
+            aln_seqs.append(data_tuple[1])
+            scores.append(data_tuple[2])
             labels.append(data_tuple[3])
-        return {'accession_id': acc_list, 'neighbors': neighbors, 'distances': distances, 'labels': labels}
+        return {'accession_id': acc_list,
+                'aligned_seqs': aln_seqs,
+                'scores': scores,
+                'labels': labels}
 
 
-def worker_parser(data_dict, refs, accession_id):
+def get_label(s1, s2):
+    if len(s1) != len(s2):
+        raise ValueError("Strand lengths are not equal!")
+    return [ch1 != ch2 for ch1, ch2 in zip(s1, s2)]
+
+
+def worker_parser(data, refs, metadata, accession_id):
     """
     Compute Hamming distances and return the string rep for closest seq
     and label derived from shortest reference sequence.
 
-    :param data_dict:
+    :param data:
     :param refs:
     :param accession_id: string
     :return: tuple
     """
 
-    seq = data_dict[accession_id].seq
-    for ref in refs:
-        # Compute distance to sequence
-        alignment = pairwise2.align.align
+    seq = data[accession_id].seq
+    ref_seq = refs[metadata[accession_id]["ref"]].seq
+    aligned = pairwise2.align.globalxx(seq, ref_seq)
+    aln_seq, aln_ref, score, begin, end = aligned[0]
 
-    raise NotImplemented
-    # return accession_id, neighbor, distance, label
+    return accession_id, aln_seq, aligned.score, get_label(aln_seq, aln_ref)
