@@ -1,5 +1,5 @@
-from .get_metadata import get_sequence_metadata
+from .get_metadata import *
 from . import model
-from . import parser
+from . parser import *
 from . import tokenizer
 from . import dataset
