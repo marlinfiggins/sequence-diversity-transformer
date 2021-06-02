@@ -21,8 +21,13 @@ def tokenize_seq(seq: Iterable, token_len: int = 1, pattern: str = 'overlap', le
     """
     tokens = []
     if pattern == 'overlap' or token_len == 1:
-        for idx in range(len(seq) - token_len):
+        for idx in range(len(seq) - token_len + 1):
+            # Start at the begining
             tokens.append(str(seq[idx:idx + token_len]))
+        if token_len > 1:
+            for idx in range(token_len-1, 0, -1):
+                tokens.append(str(seq[-idx:]))
+
     elif pattern == 'sparse':
         num_expected_tokens = len(seq) // token_len
         if len_rule == 'strict':
@@ -31,7 +36,7 @@ def tokenize_seq(seq: Iterable, token_len: int = 1, pattern: str = 'overlap', le
             num_expected_tokens += 1
 
         for idx in range(num_expected_tokens):
-            tokens.append(seq[idx * token_len, (idx + 1) * token_len])
+            tokens.append(seq[idx * token_len: (idx + 1) * token_len])
     else:
         raise ValueError(f"Value of {pattern} was not 'overlap' or 'sparse'")
     return tokens
@@ -45,7 +50,7 @@ def _generate_keywords_by_len(length: int = 1) -> (list[str], list[str]):
     """
     if length > 5:
         raise Warning('Are you sure you want to do that? The combinatorics are not on your side')
-    keywords = list('ACTG')  # str is an iterable!
+    keywords = list('ACTG-')  # str is an iterable!
     keywords_last = []
     exit_flag = False
     for item in keywords:
@@ -108,5 +113,5 @@ def onehot_tokens(token_list: list[str], min_token_len: int = 1, dense=True, emb
 
     token_numerical = [embed_map[token] for token in token_list]
 
-    return token_numerical, (embed_map, debed_map)
+    return token_numerical, embed_map, debed_map
 
