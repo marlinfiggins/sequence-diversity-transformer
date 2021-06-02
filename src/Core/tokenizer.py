@@ -54,7 +54,7 @@ def _generate_keywords_by_len(length: int = 1) -> (list[str], list[str]):
     keywords_last = []
     exit_flag = False
     for item in keywords:
-        for char in 'ACTG':
+        for char in 'ACTG-':
             new_item = item + char
             if len(new_item) == length:
                 keywords_last.append(new_item)
