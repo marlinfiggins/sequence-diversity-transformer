@@ -1,5 +1,6 @@
 from Bio import SeqIO
 import pandas as pd
+import numpy as np
 
 
 def get_sequence_metadata(file, save=True):
@@ -23,6 +24,40 @@ def get_sequence_metadata(file, save=True):
     return dataframe
 
 
+# Query function
+def query_metadata(df: pd.DataFrame, start_year: int, end_year: int = 2020, strain: str = None,
+                   seq_name: str = None, strain_except=None):
+    """
+    Helper function to filter metadata dataframe.
+    Returns a dataframe with rows matching seq_name, strain
+    :param strain_except:
+    :param strain:
+    :param seq_name:
+    :param end_year:
+    :param start_year:
+    :param df: pandas dataframe
+           start_year: int
+           end_year: (optional) int
+           strain: (optional, case sensitive) string
+           seq_name: (optional, case sensitive) string
+    """
+    # Filter by seqname
+    if seq_name is not None:
+        assert type(seq_name) is not None
+        df = df.loc[df['segname'].str.contains(seq_name)]
+    # Filter by strain
+    if strain is not None:
+        assert type(seq_name) is not None
+        df = df.loc[df['strain'].str.contains(strain)]
+    if strain_except is not None:
+        df = df.loc[~df['strain'].str.contains(strain_except)]
+    # Filter by year
+    years = [str(x) for x in np.arange(start_year, end_year + 1, 1)]
+    out = df.loc[df['year'].isin(years)]
+
+    return out
+
+
 def load_metadata_from_file(filename):
     """
     Helper function to load in metadata from a file.
@@ -30,7 +65,3 @@ def load_metadata_from_file(filename):
     :return:
     """
     return pd.read_csv(filename, delimiter='\t')
-
-
-if __name__ == "__main__":
-    df = get_sequence_metadata("../data/FASTA_samples_no_identical_seqs.fa" )
