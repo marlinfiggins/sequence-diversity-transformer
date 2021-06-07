@@ -37,8 +37,11 @@ class TransformerModel(torch.nn.Module):
         output = self.softmax(output)
         return output
 
-    def predict(self, data):
-        return np.argmax(self(torch.as_tensor(data)).numpy())
+    def predict(self, seq):
+        seq = torch.as_tensor(seq)
+        src_mask = self.generate_square_subsequent_mask(seq.size(0))
+        print(self(seq, src_mask).shape)
+        return torch.argmax(self(seq, src_mask), 2).numpy()
 
 
 class PositionalEncoding(torch.nn.Module):
