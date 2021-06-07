@@ -7,7 +7,7 @@ import math
 
 class Dataset(torch.utils.data.IterableDataset):
     # embed map should be built once per application and shared between classes/datasets
-    def __init__(self, data_dict, embed):#  token_len: int = 1, dense=False, embed=None, debed=None):
+    def __init__(self, data_dict, embed): #  token_len: int = 1, dense=False, embed=None, debed=None):
         super().__init__()
         self.full_data = []
         self.data_list = []
@@ -35,8 +35,21 @@ class Dataset(torch.utils.data.IterableDataset):
         self.end = len(self.full_data)
         self.eval_mode = True
 
+        self.subseq_split = False
+        self.subseq_data = []
+        self.subseq_labels = []
+
     def embedding_size(self):
         return len(self.embedding.keys())
+
+    def make_subseqs(self, length=500):
+        for data_entry in self.full_data:
+            for idx in range(0, len(data_entry['seq'])-length, 100):
+                self.subseq_data.append(torch.tensor(data_entry['tokens'][idx:idx+length]))
+                self.subseq_labels.append(torch.tensor(data_entry['label_seq'][idx:idx+length]))
+
+        self.subseq_split = True
+        self.end = len(self.subseq_data)
 
     def return_dataset_pytorch(self, batch_size=32):
         dataset = torch.utils.data.DataLoader(dataset=self,  # A neat self-reference!
@@ -56,10 +69,18 @@ class Dataset(torch.utils.data.IterableDataset):
             worker_id = worker_info.id
             iter_start = self.start + worker_id * per_worker
             iter_end = min(iter_start + per_worker, self.end)
-        if self.eval_mode:
-            return iter(zip(self.data_list[iter_start:iter_end], self.label_list[iter_start:iter_end]))
+        # Switch which data iterable to look inside
+        if self.subseq_split:
+            list_data = self.subseq_data
+            list_labels = self.subseq_labels
         else:
-            return iter(self.full_data[iter_start:iter_end])
+            list_data = self.full_data
+            list_labels = self.label_list
+
+        if self.eval_mode:
+            return iter(zip(list_data[iter_start:iter_end], list_labels[iter_start:iter_end]))
+        else:
+            return iter(self.data_list[iter_start:iter_end])
 
     def share_embed(self):
         # Returns a deep copy of the embedding map

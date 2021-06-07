@@ -12,7 +12,8 @@ class TransformerModel(torch.nn.Module):
         self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layers, nlayers)
         self.encoder = torch.nn.Embedding(ntoken, ninp)
         self.ninp = ninp
-        self.decoder = torch.nn.Linear(ninp, ntoken)
+        self.decoder = torch.nn.Linear(ninp, 2)
+        self.softmax = torch.nn.Softmax(dim=2)
 
         self.init_weights()
 
@@ -33,7 +34,11 @@ class TransformerModel(torch.nn.Module):
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
+        output = self.softmax(output)
         return output
+
+    def predict(self, data):
+        return np.argmax(self(torch.as_tensor(data)).numpy())
 
 
 class PositionalEncoding(torch.nn.Module):
@@ -53,4 +58,3 @@ class PositionalEncoding(torch.nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
-
