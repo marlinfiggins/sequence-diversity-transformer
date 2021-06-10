@@ -27,7 +27,8 @@ class Dataset(torch.utils.data.IterableDataset):
                                    'seq': data_dict['aligned_seqs'][idx],
                                    'label_seq': data_dict['labels'][idx],
                                    # Now we tokenize the label and input string to dense numbered vectors
-                                   'tokens': data_dict['numerical_tokens'][idx]})
+                                   'tokens': data_dict['numerical_tokens'][idx],
+                                   'drop_pos': 0})
             self.data_list.append(torch.tensor(data_dict['numerical_tokens'][idx]))
             self.label_list.append(torch.tensor(data_dict['labels'][idx]))
 
@@ -39,14 +40,29 @@ class Dataset(torch.utils.data.IterableDataset):
         self.subseq_data = []
         self.subseq_labels = []
 
+    def drop_dashes(self, dash_pos=4, drop_token = '-'):
+        for idx, data_item in enumerate(self.full_data):
+            # Find the tokens to drop
+            drop_pos = np.where(np.asarray(data_item['tokens']) == dash_pos)
+            # Store this info
+            data_item['drop_pos'] = drop_pos
+            # Build a mask
+            mask = np.ones(len(data_item['tokens']), dtype=bool)
+            mask[drop_pos] = False
+            # Drop the tokens
+            data_item['tokens'] = np.asarray(data_item['tokens'] )[mask].tolist()
+            data_item['label_seq'] = np.asarray(data_item['label_seq'])[mask].tolist()
+            data_item['seq'] = [v for v in data_item['seq'] if v != drop_token]
+            self.label_list[idx] = torch.as_tensor(self.label_list[idx].numpy()[mask])
+
     def embedding_size(self):
         return len(self.embedding.keys())
 
     def make_subseqs(self, length=500):
         for data_entry in self.full_data:
             for idx in range(0, len(data_entry['seq'])-length, 100):
-                self.subseq_data.append(torch.tensor(data_entry['tokens'][idx:idx+length]))
-                self.subseq_labels.append(torch.tensor(data_entry['label_seq'][idx:idx+length]))
+                self.subseq_data.append(torch.as_tensor(data_entry['tokens'][idx:idx+length]))
+                self.subseq_labels.append(torch.as_tensor(data_entry['label_seq'][idx:idx+length]))
 
         self.subseq_split = True
         self.end = len(self.subseq_data)

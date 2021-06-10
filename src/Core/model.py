@@ -40,8 +40,9 @@ class TransformerModel(torch.nn.Module):
     def predict(self, seq):
         seq = torch.as_tensor(seq)
         src_mask = self.generate_square_subsequent_mask(seq.size(0))
-        print(self(seq, src_mask).shape)
-        return torch.argmax(self(seq, src_mask), 2).numpy()
+        # print(self(seq, src_mask).shape)
+        pred = self(seq, src_mask)
+        return torch.argmax(pred, 2).numpy(), pred
 
 
 class PositionalEncoding(torch.nn.Module):
